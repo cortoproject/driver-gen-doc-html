@@ -1,0 +1,11 @@
+{
+    "id": "driver/gen/doc/html",
+    "type": "package",
+    "value": {
+        "description": "HTML generator for corto documentation framework",
+        "author": "Sander Mertens",
+        "license": "GPL-3.0",
+        "managed": false,
+        "use": [ "corto", "corto/g" ]
+    }
+}
