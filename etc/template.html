@@ -31,6 +31,9 @@
             {{index}}
           </ol>
         </div>
+        <div class="made-with-love">
+            generated with ♥ by <a href="https://github.com/cortoproject/doc" target="_blank">corto/doc</a>
+        </div>
       </div>
       <div class="column">
         <div class="doc">
@@ -50,14 +53,6 @@
             parElements = $('li');
             resize();
             scrollItems();
-
-            // Smooth scroll
-            $('a').click(function(){
-              $('html, body').animate({
-                scrollTop: $( $.attr(this, 'href') ).offset().top
-              }, 200);
-              return false;
-            });
 
             // Update highlighted link
             $(".doc").on('scroll', function() {scrollItems()});

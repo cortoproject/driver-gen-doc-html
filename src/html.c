@@ -180,14 +180,6 @@ static int html_walkDocChilds(corto_object o, void *userData) {
 
     corto_buffer_append(&data->content, "<div class=\"indent\">\n");
 
-    if (description && strlen(description)) {
-        if (data->level < 3) {
-            corto_buffer_append(&data->content, "<p class=\"description\">%s</p>\n", description);
-        } else {
-            corto_buffer_append(&data->content, "<p>%s</p>\n", description);
-        }
-    }
-
     corto_string parsedText = doc_parse(text);
     corto_buffer_append(&data->content, "%s\n", parsedText);
     corto_dealloc(parsedText);
