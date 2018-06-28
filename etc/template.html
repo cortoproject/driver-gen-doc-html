@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="description" content="Documentation - {{title}}"/>
@@ -18,14 +18,198 @@
     <link href="{{parent-path}}res/prism.css" rel="stylesheet">
     <link href="{{parent-path}}res/doc.css" rel="stylesheet">
     <link href="{{parent-path}}res/material.css" rel="stylesheet">
-    <script src="{{parent-path}}res/jquery-1.11.2.min.js"></script>
-    <link rel="icon" href="{{parent-path}}../images/logo.png" type="image/x-icon">
-    <title>{{title}} | Corto documentation</title>
+    <link rel="icon" href="{{parent-path}}res/logo.png" type="image/x-icon">
+    <title>{{title}} | Documentation</title>
   </head>
-  <body>
+  <body onscroll="doc_scroll()">
+    <script>
+      var root_elems = []
+      var scroll_timer = undefined
+      var cur_scroll_pos = 0
+      var elem_index_scroll = undefined
+
+      class index_elem {
+          constructor(elem) {
+              this.elem = elem
+              this.elem.index_elem_instance = this
+              this.header_elem = document.getElementById(elem.dataset.header)
+              this.lvl = elem.dataset.level
+              this.children = []
+              this.active = undefined
+              this.hide = false
+              this.children_hidden = false
+              this.offset_end = 0
+
+              var rect = this.header_elem.getBoundingClientRect()
+              var scrollTop = window.pageYOffset || document.documentElement.scrollTop
+              this.offset = rect.top + scrollTop
+
+              if (this.lvl == 1) {
+                  root_elems.push(this)
+              }
+          }
+
+          set_active_for_scroll_pos(scroll_pos) {
+              var active = false
+
+              if (scroll_pos >= this.offset && scroll_pos < this.offset_end) {
+                  active = true
+              }
+
+              if (active) {
+                  if (!this.active || this.active == undefined) {
+                      this.active = true
+                      this.elem.className += " active"
+                  }
+                  this.show_children()
+              } else {
+                  if (this.active || this.active == undefined) {
+                      this.active = false
+                      this.elem.className = this.elem.className.replace(/\bactive\b/g, "")
+                      this.hide_children()
+                  }
+              }
+
+              var child_active = false
+
+              this.children.forEach(e => {
+                  if (e.set_active_for_scroll_pos(scroll_pos)) {
+                      child_active = true
+                  }
+              })
+
+              if (active && !child_active) {
+                  var style = window.getComputedStyle(elem_index_scroll);
+                  var height = parseInt(style.height)
+                  if (this.elem.offsetTop >= (elem_index_scroll.scrollTop + height - 150)) {
+                      elem_index_scroll.scrollTop += 300
+                  }
+                  if (this.elem.offsetTop < elem_index_scroll.scrollTop) {
+                      elem_index_scroll.scrollTop -= 300
+                  }
+              }
+
+              return active || child_active
+          }
+
+          toggle() {
+              if (this.active) {
+                  if (this.children_hidden) {
+                      this.show_children()
+                  } else {
+                      this.hide_children()
+                  }
+              }
+          }
+
+          add_child(child) {
+              this.children.push(child)
+          }
+
+          show_elem() {
+              if (this.hide) {
+                  this.hide = false;
+                  this.elem.style.display = "block"
+              }
+          }
+
+          hide_elem() {
+              if (!this.hide) {
+                  this.hide = true;
+                  this.elem.style.display = "none"
+              }
+
+              this.children.forEach(e => {
+                  e.hide_elem()
+              })
+          }
+
+          show_children() {
+              this.children_hidden = false
+              this.children.forEach(e => {
+                  e.show_elem()
+              })
+          }
+
+          hide_children() {
+              this.children_hidden = true
+              this.children.forEach(e => {
+                  e.hide_elem()
+              })
+          }
+      }
+
+      function get_scroll_pos() {
+          var doc = document.documentElement
+          var top = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0)
+          return top
+      }
+
+      function update_scroll() {
+          cur_scroll_pos = get_scroll_pos()
+
+          root_elems.forEach(e => {
+              e.set_active_for_scroll_pos(cur_scroll_pos + 1)
+          })
+      }
+
+      function doc_scroll() {
+          if (scroll_timer) {
+              clearTimeout(scroll_timer)
+          }
+
+          scroll_timer = setTimeout(() => {
+              scroll_timer = undefined
+              update_scroll()
+          }, 100)
+
+          /* If scrolling fast, don't wait for timeout to expire */
+          if (Math.abs(get_scroll_pos() - cur_scroll_pos) >= 200) {
+              update_scroll()
+          }
+      }
+
+      function navigate_index(e) {
+          e.index_elem_instance.toggle();
+          window.location = '#' + e.dataset.header
+      }
+
+      window.onload = () => {
+          var parents = []
+          var lvl_prev = -1
+
+          elem_index_scroll = document.getElementById("index-scroll");
+
+          document.querySelectorAll("#index li").forEach(e => {
+              var lvl = e.dataset.level - 1
+              var elem = new index_elem(e)
+
+              if (lvl <= lvl_prev) {
+                  for (var i = lvl; i <= lvl_prev; i ++) {
+                      parents[i].offset_end = elem.offset
+                  }
+              }
+
+              lvl_prev = lvl
+              parents[lvl] = elem
+
+              if (lvl) {
+                  parents[lvl - 1].add_child(elem)
+              }
+          })
+
+          for (var i = 0; i <= lvl_prev; i ++) {
+              parents[i].offset_end = document.body.scrollHeight
+          }
+
+          update_scroll()
+      }
+
+    </script>
+
     <div class="content">
-      <div class="index">
-        <div class="index-scroll">
+      <div id="index">
+        <div id="index-scroll">
           <div class="index-title">{{title}}</div>
           <ol>
             {{index}}
@@ -35,161 +219,16 @@
             generated with ♥ by <a href="https://github.com/cortoproject/doc" target="_blank">corto/doc</a>
         </div>
       </div>
+
       <div class="column">
-        <div class="doc">
+        <div id="doc">
           <div class="indent"><p>{{title}}</p></div>
           <hr>
           {{content}}
         </div>
       </div>
     </div>
+
     <script src="{{parent-path}}res/prism.js"></script>
-    <script>
-        // Code to make index highlight when scrolling
-        var parElements = [];
-        var parHeaders = [];
-
-        $(document).ready(function() {
-            parElements = $('li');
-            resize();
-            scrollItems();
-
-            // Update highlighted link
-            $(".doc").on('scroll', function() {scrollItems()});
-
-            // Initialize data-expand attribute
-            $(".index-h1").attr("data-expand", "false");
-
-            // Toggle expand on click
-            $(".index-h1").click(function() {
-                var expand = $(this).attr("data-expand");
-                if (expand == "true") {
-                    expand = "false"
-                } else {
-                    expand = "true";
-                }
-                $(this).attr("data-expand", expand);
-                scrollItems();
-            });
-
-            function scrollItems() {
-                var index;
-
-                for (var i = 0; i < parHeaders.length; i++) {
-                    if ($(parHeaders[i]).offset().top > 0) {
-                        index = i - 1;
-                        break;
-                    }
-                }
-
-                if (index < 0) index = 0;
-
-                items = $('div.index-scroll li');
-
-                for (var i = 0; i < parElements.length; i++) {
-                    // If current element equals index of element currently being
-                    // viewed by the user, it is the active element.
-                    if (i != index) {
-                        $(parElements[i]).removeClass('active');
-                    } else {
-                        $(parElements[i]).addClass('active');
-
-                        var pos = $(parElements[i]).offset().top;
-                        if (pos < 130 || pos > (window.innerHeight - 30)) {
-                          var elem = $('div.index-scroll');
-                          elem.scrollTop(elem.scrollTop() + pos - 130);
-                        }
-
-                        // Show all h2 list items after the current h1 and
-                        // before the next h1
-                        var active = false;
-                        var lastH1, activeH1 = undefined;
-
-                        // First, find the h1 list item that belongs to the
-                        // current active item
-                        items.each(function() {
-                            if ($(this).hasClass('index-h1')) {
-                                lastH1 = this
-                            } else if (this == parElements[i]) {
-                                activeH1 = lastH1
-                            }
-                        });
-
-                        // Show & hide items
-                        items.each(function() {
-                            if ($(this).hasClass('index-h1')) {
-                                var expand = $(this).attr("data-expand");
-                                if (activeH1 == this || expand == "true") {
-                                    active = true;
-                                } else {
-                                    active = false;
-                                }
-                            } else {
-                                if (active == false) {
-                                    $(this).hide();
-                                } else {
-                                    $(this).show();
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-
-            // Update highlight on link clickn
-            $('.navigation ul li a').click(function () {
-              $('.navigation ul li a').removeClass('active');
-                $(this).addClass('active');
-            });
-        });
-
-        // Code to resize font of title in index to size of div
-        var rtime;
-        var timeout = false;
-        var delta = 100;
-        $(window).resize(function() {
-            rtime = new Date();
-            if (timeout === false) {
-                timeout = true;
-                setTimeout(resizeend, delta);
-            }
-        });
-        function resizeend() {
-            if (new Date() - rtime < delta) {
-                setTimeout(resizeend, delta);
-            } else {
-                timeout = false;
-                resize();
-            }
-        }
-        function resize() {
-            $('.resize').each(function(i, obj) {
-                $(this).css('font-size', '20px');
-                while ($(this).width() > ($(this).parent().width() - 10)) {
-                    $(this).css('font-size', (parseInt($(this).css('font-size')) - 1) + "px");
-                }
-            });
-
-            $('p.section,h2').each(function() {
-                parHeaders.push(this);
-            });
-
-            // Hack to give the doc the right height
-            $('.doc').css('height', window.innerHeight + 'px');
-
-            // Hack to give doc the right width
-   //         $('.doc').css('width', window.innerWidth - 300 + 'px');
-            if (window.innerWidth > 1100) {
-              $('.doc').css('width', 800 + 'px');
-            } else if (window.innerWidth > 800) {
-              $('.doc').css('width', window.innerWidth - 300 + 'px');
-            } else {
-              $('.doc').css('width', window.innerWidth + 'px');
-            }
-
-            // Hack to give index the right height
-            $('.index-scroll').css('height', window.innerHeight - $('.nav').height() + 'px');
-        }
-    </script>
   </body>
 </html>

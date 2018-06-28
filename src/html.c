@@ -24,11 +24,19 @@ static char* doc_parentPath(char *buffer, int depth) {
 static void* html_getDocMember(corto_object doc, corto_string member, htmlData_t *data) {
     corto_member m = corto_interface_resolveMember(data->docClass, member);
     void *result = NULL;
+
+    if (!corto_instanceof(data->docClass, doc)) {
+        corto_critical("object '%s' is not of class '%s'",
+            corto_fullpath(NULL, doc),
+            corto_fullpath(NULL, data->docClass));
+    }
+
     if (m) {
         result = CORTO_OFFSET(doc, m->offset);
     } else {
         corto_critical("member description not found in doc class");
     }
+
     return result;
 }
 
@@ -100,7 +108,7 @@ static int html_walkDocChilds(corto_object o, void *userData) {
     corto_id link;
     corto_bool noIndex = TRUE;
 
-    if (data->level < 3) {
+    if (data->level < 4) {
         noIndex = FALSE;
     }
 
@@ -123,7 +131,8 @@ static int html_walkDocChilds(corto_object o, void *userData) {
             } while (--sp);
 
             for (; sp < data->level; sp ++) {
-                char num[15]; sprintf(num, "%d", doc_getIndexFromDoc(stack[sp], data));
+                char num[15];
+                sprintf(num, "%d", doc_getIndexFromDoc(stack[sp], data));
                 strcat(index, num);
                 strcat(index, ".");
             }
@@ -135,13 +144,14 @@ static int html_walkDocChilds(corto_object o, void *userData) {
         }
 
         if (data->level == 1) {
-            corto_buffer_append(&data->content, "<a name=\"%s\"></a>\n<p class=\"section\">%s</p>\n",
+            corto_buffer_append(&data->content,
+                "<a id=\"%s\"></a>\n<p class=\"section\">%s</p>\n",
                 link,
                 /*index,*/
                 niceName);
         } else {
             corto_buffer_append(&data->content,
-                "<a name=\"%s\"></a>\n<h%d>%s</h%d>\n",
+                "<a id=\"%s\"></a>\n<h%d>%s</h%d>\n",
                 link,
                 data->level,
                 /*index,*/
@@ -153,26 +163,30 @@ static int html_walkDocChilds(corto_object o, void *userData) {
             corto_buffer_append(&data->content, "<hr>\n");
         }
 
-        if (data->level < 3) {
+        if (data->level < 4) {
             corto_buffer_append(&data->index,
-              "<li class=\"index-h%d\" onclick=\"window.location='#%s'\">",
+              "<li class=\"index-h%d\" data-level=\"%d\" data-header=\"%s\" onclick=\"navigate_index(this)\">",
                 data->level,
+                data->level,
+                link,
                 link);
 
             if (data->level == 1) {
                 corto_buffer_appendstr(&data->index,
-                    "<span class=\"material-icons\">chevron_right</span>&nbsp;&nbsp;");
-            } else {
-                corto_buffer_appendstr(&data->index,
                     "<span class=\"material-icons\">subject</span>&nbsp;&nbsp;");
-                /*corto_buffer_append(&data->index, "%s</li>\n",
-                      niceName);*/
+            } else if (data->level == 2) {
+                corto_buffer_appendstr(&data->index,
+                    "<span class=\"material-icons\">chevron_right</span>&nbsp;&nbsp;");
+            } else if (data->level == 3) {
+                corto_buffer_appendstr(&data->index,
+                    "•&nbsp;&nbsp;");
             }
+
             if (data->level == 1) {
                 corto_buffer_append(&data->index, "%s<span class=\"brief\">%s</span></li>\n",
                       niceName, description ? description : "");
             } else {
-                corto_buffer_append(&data->index, "%s\n",
+                corto_buffer_append(&data->index, "%s</li>\n",
                       niceName, description ? description : "");
             }
         }
