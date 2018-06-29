@@ -22,7 +22,7 @@ static char* doc_parentPath(char *buffer, int depth) {
 }
 
 static void* html_getDocMember(corto_object doc, corto_string member, htmlData_t *data) {
-    corto_member m = corto_interface_resolveMember(data->docClass, member);
+    corto_member m = corto_interface_resolve_member(data->docClass, member);
     void *result = NULL;
 
     if (!corto_instanceof(data->docClass, doc)) {
